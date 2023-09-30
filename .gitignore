@@ -12,3 +12,6 @@ model/*
 !tests/
 tests/*
 !tests/*.py
+!tests/Makefile
+
+
