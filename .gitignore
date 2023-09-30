@@ -1,0 +1,14 @@
+*
+!.gitignore
+
+!hdl/
+hdl/*
+!hdl/*.v
+
+!model/
+model/*
+!model/*.py
+
+!tests/
+tests/*
+!tests/*.py
