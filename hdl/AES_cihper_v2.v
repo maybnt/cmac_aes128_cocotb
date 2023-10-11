@@ -78,7 +78,7 @@ begin
 end
 
 //assign Done=Rst_n&(~GO);
-always@(posedge CLK)Done= !(|cnt[3:1]) && cnt[0] && !ld && aes_covt_valid;
+always@(posedge CLK)Done= 1;
 always@(posedge CLK)	ldr<= ld;											//
 always@(posedge CLK)	if(ld) 	KEYr<=  KEY;
 always@(posedge CLK)	if(ld)	TextInr<=  TextIn;
