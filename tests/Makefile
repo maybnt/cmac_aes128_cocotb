@@ -21,13 +21,14 @@ TOPLEVEL_LANG ?= verilog
 
 MODULE := test_cmac_aes128
 
-# ifeq ($(SIM),verilator)
+# 保存波形
+ifeq ($(SIM),verilator)
 EXTRA_ARGS += --trace --trace-structs
 # EXTRA_ARGS += --threads {4}
-EXTRA_ARGS += --trace-fst
+# EXTRA_ARGS += --trace-fst
 # EXTRA_ARGS += --coverage
-# else ifeq ($(SIM),questa)
+else ifeq ($(SIM),questa)
 WAVES = 1
-# endif
+endif
 
 include $(shell cocotb-config --makefiles)/Makefile.sim

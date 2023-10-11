@@ -11,14 +11,14 @@ from cmac_aes128 import cmac_aes128
 class PulseDriver(BusDriver):
     _signals = [
 				'CLK',
-				'ld_Key',
-				'ld_Block',
+				'cm_ld_Key',
+				'cm_ld_Block',
 				'Done',
-				'Last_Block',
-				'KEY',
-				'TextIn',
+				'cm_Last_Block',
+				'cm_KEY',
+				'cm_TextIn',
 				'TextOut',
-				'Last_Block_Len'
+				'cm_Last_Block_Len'
             ]
 
     def __init__(self,dut):
@@ -33,22 +33,30 @@ class PulseDriver(BusDriver):
 async def test_cmac_aes128(dut):
     clock = Clock(dut.CLK,10,units='ns')
     cocotb.start_soon(clock.start(start_high=False))
+    input_bus = Bus(dut,"cm",[
+                              'ld_Key',
+                              'ld_Block',
+                              'Last_Block',
+                              'KEY',
+                              'TextIn',
+                              'Last_Block_Len',
+                                
+    ],bus_separator = "_")
     pulse_driver = PulseDriver(dut)
     for i in range(10):
-        dut.ld_Key.value = 1
-        dut.ld_Block.value = 1
-        dut.Rst_n.value = 1
-        dut.Last_Block.value = 0
-        dut.KEY.value = random.randint(0,65535)
-        dut.TextIn.value = random.randint(0,65535)
-        dut.Last_Block_Len.value = 0
+        input_bus.ld_Key.value = 1
+        input_bus.ld_Block.value = 0
+        input_bus.Last_Block.value = 0
+        input_bus.KEY.value = random.randint(0,65535)
+        input_bus.TextIn.value = random.randint(0,65535)
+        input_bus.Last_Block_Len.value = 0
         transaction = [
-                       dut.ld_Key,
-                       dut.ld_Block,
-                       dut.Last_Block,
-                       dut.KEY,
-                       dut.TextIn,
-                       dut.Last_Block_Len,
+                       input_bus.ld_Key,
+                       input_bus.ld_Block,
+                       input_bus.Last_Block,
+                       input_bus.KEY,
+                       input_bus.TextIn,
+                       input_bus.Last_Block_Len,
                     ]
         await pulse_driver.send(transaction)
         

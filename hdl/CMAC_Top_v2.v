@@ -1,22 +1,22 @@
 module CMAC_Top_v2(
 						CLK,
-						ld_Key,
-						ld_Block,
+						cm_ld_Key,
+						cm_ld_Block,
 						Rst_n,
 						Done,
-						Last_Block,
-						KEY,
-						TextIn,
+						cm_Last_Block,
+						cm_KEY,
+						cm_TextIn,
 						TextOut,
-						Last_Block_Len
+						cm_Last_Block_Len
 
 );
 //*****************************************
 //
 //							input & output 
-input CLK,ld_Key,ld_Block,Rst_n,Last_Block;
-input [7:0]Last_Block_Len;
-input [127:0] TextIn,KEY;
+input CLK,cm_ld_Key,cm_ld_Block,Rst_n,cm_Last_Block;
+input [7:0]cm_Last_Block_Len;
+input [127:0] cm_TextIn,cm_KEY;
 output [127:0]TextOut;
 output  Done;
 //*****************************************
@@ -35,7 +35,7 @@ wire  [127:0]TextIn_CBC;
 wire  [127:0]TextIn_Last;
 wire  [127:0]TextIn_Filled;
 wire  [127:0]k1_temp,k2_temp,k1_k2_reg_shift1,k1_temp_shift1;
-wire 	[127:0]k1_k2_Select;//the result of caculate with the Key is K and content is all zero
+wire 	[127:0]k1_k2_Select;//the result of caculate with the cm_KEY is K and content is all zero
 wire ld_temp;
 //*****************************************
 //
@@ -46,23 +46,23 @@ reg [127:0]		Set_1_Num,Clear_0_Num;
 //*****************************************
 //
 //						assign 
-assign ld_temp=ld_Key|ld_Block;
-assign TextIn_CBC=IV_reg^TextIn;
-assign k1_k2_Select=(Last_Block_Len[7])?k1_temp:k2_temp;
-assign TextIn_Filled=(TextIn&Clear_0_Num)|Set_1_Num;
+assign ld_temp=cm_ld_Key|cm_ld_Block;
+assign TextIn_CBC=IV_reg^cm_TextIn;
+assign k1_k2_Select=(cm_Last_Block_Len[7])?k1_temp:k2_temp;
+assign TextIn_Filled=(cm_TextIn&Clear_0_Num)|Set_1_Num;
 assign TextIn_Last=IV_reg^TextIn_Filled^k1_k2_Select;
-assign TextIn_temp=(Last_Block==1'b1)?TextIn_Last:TextIn_CBC;
+assign TextIn_temp=(cm_Last_Block==1'b1)?TextIn_Last:TextIn_CBC;
 //*****************************************
 //
 //						Set_1_Num,Clear_0_Num
 //閸氬孩婀℃担璺ㄦ暏鏉烆垯娆㈤悽鐔稿灇
-always@(Last_Block or Last_Block_Len)
+always@(cm_Last_Block or cm_Last_Block_Len)
 begin
-if(Last_Block==1'b0)
+if(cm_Last_Block==1'b0)
 	Set_1_Num<=128'd0;
 else
 	begin
-	case(Last_Block_Len)
+	case(cm_Last_Block_Len)
 8'd64:Set_1_Num<=128'h00000000000000008000000000000000;
 
 default:Set_1_Num<=128'h00000000000000000000000000000000;
@@ -71,13 +71,13 @@ default:Set_1_Num<=128'h00000000000000000000000000000000;
 
 end
 
-always@(Last_Block or Last_Block_Len)
+always@(cm_Last_Block or cm_Last_Block_Len)
 begin
-if(Last_Block==1'b0)
+if(cm_Last_Block==1'b0)
 	Clear_0_Num<=128'd0;
 else
 	begin
-	case(Last_Block_Len)
+	case(cm_Last_Block_Len)
 8'd64:Clear_0_Num<=128'hffffffffffffffff8000000000000000;
 default:Clear_0_Num<=128'hffffffffffffffffffffffffffffffff;
 	endcase 
@@ -101,11 +101,11 @@ always@(posedge CLK or negedge Rst_n)
 begin 
 if(~Rst_n)
 	state_next<=s0;
-else if((state==s0 |(state==s1 & Done ==1'b1)|state==s1&state_next==s2|state==s2 |(state_next==s0 & state==s3))& ld_Block==1'b1 & Last_Block ==1'b1)
+else if((state==s0 |(state==s1 & Done ==1'b1)|state==s1&state_next==s2|state==s2 |(state_next==s0 & state==s3))& cm_ld_Block==1'b1 & cm_Last_Block ==1'b1)
 	state_next<=s3;
-else if((state==s0 |state==s2 & state_next==s2|(state_next==s0 & state==s3 ) ) &(ld_Block==1'b1 & Last_Block ==1'b0 )| state==s1 & Done==1'b1)
+else if((state==s0 |state==s2 & state_next==s2|(state_next==s0 & state==s3 ) ) &(cm_ld_Block==1'b1 & cm_Last_Block ==1'b0 )| state==s1 & Done==1'b1)
 	state_next<=s2;
-else if((state==s0& state_next==s0 |state==s3& state_next==s0) & ld_Key==1'b1)
+else if((state==s0& state_next==s0 |state==s3& state_next==s0) & cm_ld_Key==1'b1)
 	state_next<=s1;
 else if(state==s3 & Done==1'b1)
 	state_next<=s0;
@@ -151,7 +151,7 @@ AES_cihper_v2 u0(
 					ld_temp,
 					Rst_n,
 					Done,
-					KEY,
+					cm_KEY,
 					TextIn_temp,
 					TextOut);
 
