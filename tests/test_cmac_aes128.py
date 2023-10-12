@@ -50,7 +50,7 @@ class OutputMonitor(BusMonitor):
             await ReadOnly()
 
             if self.bus.Done.value:
-                cal_data = int(self.bus.TextOut.value)>>8
+                cal_data = self.bus.TextOut.value
                 self._recv(cal_data) 
 
 
@@ -73,6 +73,7 @@ async def test_cmac_aes128(dut):
                                 
     ],bus_separator = "_")
     pulse_driver = PulseDriver(dut)
+    simulate_output = []
     for i in range(10):
         input_bus.ld_Key.value = 1
         input_bus.ld_Block.value = 1
@@ -89,16 +90,13 @@ async def test_cmac_aes128(dut):
                        input_bus.Last_Block_Len,
                     ]
         await pulse_driver.send(transaction)
-
-    simulate_output = []
-    output_monitor_inst = OutputMonitor(dut=dut,callback=simulate_output.append)
+        output_monitor_inst = OutputMonitor(dut=dut,callback=simulate_output.append)
         
-    except_output = []
+    except_output = [111,222]
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         scoreboard = Scoreboard(dut,fail_immediately=False)
-    scoreboard.add_interface(output_monitor_inst,except_output)
-    print(simulate_output)
-    print(except_output)
+    scoreboard.add_interface(output_monitor_inst,except_output,reorder_depth=2)
+    print(scoreboard.result) 
     # print(dut.TextOut.value)
