@@ -71,6 +71,8 @@ always@(posedge CLK)	if(ld)	TextInr<= #1 TextIn;
 //////////////////////////////////////////////////////////////////
 //
 //						begin &  AddFirstRoundKey
+wire [7:0] a;
+assign a = TextInr[127:120]^Wk0[31:24];
 always@(posedge CLK)
 begin
 a0[0]<=#1 ldr? 	TextInr[127:120]^Wk0[31:24]:a0_next[0];
@@ -184,7 +186,10 @@ aes_keyexpand128 key(.CLK(CLK),.ld(ld),.KEY(KEY),.Wk0(Wk0),.Wk1(Wk1),.Wk2(Wk2),.
 ////////////////////////////////////////////////////////////////
 //
 //							TextOut
-
+wire [31:0] TextOut0={a0_sr[0]^Wk0[31:24],a1_sr[0]^Wk0[23:16],a2_sr[0]^Wk0[15:08],a3_sr[0]^Wk0[07:00]};
+wire [31:0] TextOut1={a0_sr[1]^Wk1[31:24],a1_sr[1]^Wk1[23:16],a2_sr[1]^Wk1[15:08],a3_sr[1]^Wk1[07:00]};
+wire [31:0] TextOut2={a0_sr[2]^Wk2[31:24],a1_sr[2]^Wk2[23:16],a2_sr[2]^Wk2[15:08],a3_sr[2]^Wk2[07:00]};
+wire [31:0] TextOut3={a0_sr[3]^Wk3[31:24],a1_sr[3]^Wk3[23:16],a2_sr[3]^Wk3[15:08],a3_sr[3]^Wk3[07:00]};
 always@(posedge CLK)
 begin
 TextOut<=#1 {		a0_sr[0]^Wk0[31:24],a1_sr[0]^Wk0[23:16],a2_sr[0]^Wk0[15:08],a3_sr[0]^Wk0[07:00],
@@ -195,6 +200,10 @@ TextOut<=#1 {		a0_sr[0]^Wk0[31:24],a1_sr[0]^Wk0[23:16],a2_sr[0]^Wk0[15:08],a3_sr
 
 };
 
+end
+
+always@(posedge ldr) begin
+	$display("%h",TextInr);
 end
 
 /*

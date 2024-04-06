@@ -132,19 +132,19 @@ CMAC_Top  CMAC(
 
 );
 
-// CMAC_Top_v2  CMAC_v2(
-						// .CLK(clk),
-						// .ld_Key(ld_Key),
-						// .ld_Block(ld_Block),
-						// .Rst_n(rst_n),
-						// .Done(),
-						// .Last_Block(Last_Block),
-						// .KEY(128'h2b7e151628aed2a6abf7158809cf4f3c),
-						// .TextIn(TextIn),
-						// .TextOut(),
-						// .Last_Block_Len(Last_Block_Len)
-// 
-// );
+CMAC_Top_v2  CMAC_v2(
+						.CLK(clk),
+						.cm_ld_Key(ld_Key),
+						.cm_ld_Block(ld_Block),
+						.Rst_n(rst_n),
+						.Done(),
+						.cm_Last_Block(Last_Block),
+						.cm_KEY(128'h2b7e151628aed2a6abf7158809cf4f3c),
+						.cm_TextIn(TextIn),
+						.TextOut(),
+						.cm_Last_Block_Len(Last_Block_Len)
+
+);
 endmodule
 
 

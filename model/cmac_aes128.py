@@ -1,11 +1,4 @@
-# from Crypto.Hash import CMAC
-# from Crypto.Cipher import AES
-# from binascii import hexlify, unhexlify
-# secret = unhexlify('00'*16)
-# message = unhexlify('6bc1bee22e409f96e93d7e117393172a')
-# c = CMAC.new(secret,message,ciphermod = AES)
-# print(c.hexdigest())
-
+import numpy as np
 aes_box = [
 0x63,
 0x7c,
@@ -278,8 +271,20 @@ rcon = [
 0x36000000
 ]
 
-def aes_key_expand(key):
-    for i in range (10):
+def mixcolumns(b):
+    if((b>>7)&0b1):
+        xtime = (b<<1)&0xff^0x1b
+    else:
+        xtime = (b<<1)&0xff^0x00
+    return xtime
+
+def aes_cipher(textin,key):
+    a=np.zeros((4,4),dtype=int)
+    a_sb=np.zeros((4,4),dtype=int)
+    a_sr=np.zeros((4,4),dtype=int)
+    a_mc=np.zeros((4,4),dtype=int)
+    a_next=np.zeros((4,4),dtype=int)
+    for i in range(10):
         if(i == 0):
             wk3_sb = (aes_box[(key>>16)&0xff] << 24) + (aes_box[(key>>8)&0xff] << 16) + (aes_box[key&0xff] << 8) + aes_box[(key>>24)&0xff]
             wk0_next = wk3_sb ^ ((key>>96)&0xffffffff) ^ rcon[i]
@@ -290,6 +295,9 @@ def aes_key_expand(key):
             wk1r = wk1_next
             wk2r = wk2_next
             wk3r = wk3_next
+            for j in range(4):
+                for k in range(4):
+                    a[j,k] = ((textin>>(128-(j+1)*8-k*32))&0xff)^((key>>(128-(j+1)*8-k*32))&0xff)
         else:
             wk3_sb = (aes_box[(wk3_next>>16)&0xff] << 24) + (aes_box[(wk3_next>>8)&0xff] << 16) + (aes_box[wk3_next&0xff] << 8) + aes_box[(wk3_next>>24)&0xff]
             wk0_next = wk3_sb ^ wk0r ^ rcon[i]
@@ -299,9 +307,84 @@ def aes_key_expand(key):
             wk0r = wk0_next
             wk1r = wk1_next
             wk2r = wk2_next
-            wk3r = wk3_next 
-            # print(wk0_next,wk1_next,wk2_next,wk3_next)
-    return wk0_next,wk1_next,wk2_next,wk3_next
+            wk3r = wk3_next
+            a=a_next
+        # for i in range(4):
+            # a_index = 0
+            # if i == 0:
+                # print("**********")
+            # for j in range(4):
+                # a_index+=a[i,j]<<(8*j)
+                # if j == 3:
+                    # print(hex(a_index))
+        for j in range(4):
+            for k in range(4):
+                a_sb[j,k] = aes_box[a[j,k]]
+        for j in range(4):
+            for k in range(4):
+                if k+j<4:
+                    a_sr[j,k] = a_sb[j,(k+j)]
+                else:
+                    a_sr[j,k] = a_sb[j,(k+j-4)]
+        # for i in range(4):
+            # a_index = 0
+            # b_index = 0
+            # if i == 0:
+                # print("**********")
+            # for j in range(4):
+                # a_index+=a_sb[i,j]<<(8*j)
+                # b_index+=a_sr[i,j]<<(8*j)
+                # if j == 3:
+                    # print(hex(a_index))
+                    # print(hex(b_index))
+        for j in range(4):
+            a_mc[0,j] = mixcolumns(a_sr[0,j])^mixcolumns(a_sr[1,j])^a_sr[1,j]^a_sr[2,j]^a_sr[3,j]
+            a_mc[1,j] = a_sr[0,j]^mixcolumns(a_sr[1,j])^mixcolumns(a_sr[2,j])^a_sr[2,j]^a_sr[3,j]
+            a_mc[2,j] = a_sr[0,j]^a_sr[1,j]^mixcolumns(a_sr[2,j])^mixcolumns(a_sr[3,j])^a_sr[3,j]
+            a_mc[3,j] = mixcolumns(a_sr[0,j])^a_sr[0,j]^a_sr[1,j]^a_sr[2,j]^mixcolumns(a_sr[3,j])
+        for j in range(4):
+            a_next[j,0] = a_mc[j,0]^((wk0r>>(8*(3-j)))&0xff)
+            a_next[j,1] = a_mc[j,1]^((wk1r>>(8*(3-j)))&0xff)
+            a_next[j,2] = a_mc[j,2]^((wk2r>>(8*(3-j)))&0xff)
+            a_next[j,3] = a_mc[j,3]^((wk3r>>(8*(3-j)))&0xff)
+        print(hex(wk0r),hex(wk1r),hex(wk2r),hex(wk3r))
+        # for i in range(4):
+            # a_index = 0
+            # b_index = 0
+            # if i == 0:
+                # print("**********")
+            # for j in range(4):
+                # a_index+=a_mc[i,j]<<(8*j)
+                # b_index+=a_next[i,j]<<(8*j)
+                # if j == 3:
+                    # print(hex(a_index))
+                    # print(hex(b_index))
+        # print(hex(a[0,0]))
+        for i in range(4):
+            a_index = 0
+            if i == 0:
+                print("**********")
+            for j in range(4):
+                a_index+=a_sr[i,j]<<(8*j)
+                if j == 3:
+                    print(hex(a_index))
+        textout0 = 0
+        textout1 = 0
+        textout2 = 0
+        textout3 = 0
+        for j in range(4):
+            textout0+=((a_sr[j,0]^(wk0r>>8*(3-j)&0xff))<<8*(3-j))
+            textout1+=((a_sr[j,1]^(wk1r>>8*(3-j)&0xff))<<8*(3-j))
+            textout2+=((a_sr[j,2]^(wk2r>>8*(3-j)&0xff))<<8*(3-j))
+            textout3+=((a_sr[j,3]^(wk3r>>8*(3-j)&0xff))<<8*(3-j))
+            print(hex(((a_sr[j,0]^(wk0r>>8*(3-j)&0xff))<<8*(3-j))))
+        print(hex(textout0),hex(textout1),hex(textout2),hex(textout3))
+        textout=hex(textout0)+hex(textout1)[2:]+hex(textout2)[2:]+hex(textout3)[2:]
+        print(textout)
+    return textout
 key = 0x2b7e151628aed2a6abf7158809cf4f3c
+textin=0x9c1c12d244a2f95a1036bf0f97fe4611
+
+print(aes_cipher(textin,key))
 # for a in aes_key_expand(key):
     # print(a)
