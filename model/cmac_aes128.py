@@ -347,7 +347,7 @@ def aes_cipher(textin,key):
             a_next[j,1] = a_mc[j,1]^((wk1r>>(8*(3-j)))&0xff)
             a_next[j,2] = a_mc[j,2]^((wk2r>>(8*(3-j)))&0xff)
             a_next[j,3] = a_mc[j,3]^((wk3r>>(8*(3-j)))&0xff)
-        print(hex(wk0r),hex(wk1r),hex(wk2r),hex(wk3r))
+        # print(hex(wk0r),hex(wk1r),hex(wk2r),hex(wk3r))
         # for i in range(4):
             # a_index = 0
             # b_index = 0
@@ -360,14 +360,14 @@ def aes_cipher(textin,key):
                     # print(hex(a_index))
                     # print(hex(b_index))
         # print(hex(a[0,0]))
-        for i in range(4):
-            a_index = 0
-            if i == 0:
-                print("**********")
-            for j in range(4):
-                a_index+=a_sr[i,j]<<(8*j)
-                if j == 3:
-                    print(hex(a_index))
+        # for i in range(4):
+            # a_index = 0
+            # if i == 0:
+                # print("**********")
+            # for j in range(4):
+                # a_index+=a_sr[i,j]<<(8*j)
+                # if j == 3:
+                    # print(hex(a_index))
         textout0 = 0
         textout1 = 0
         textout2 = 0
@@ -377,9 +377,7 @@ def aes_cipher(textin,key):
             textout1+=((a_sr[j,1]^(wk1r>>8*(3-j)&0xff))<<8*(3-j))
             textout2+=((a_sr[j,2]^(wk2r>>8*(3-j)&0xff))<<8*(3-j))
             textout3+=((a_sr[j,3]^(wk3r>>8*(3-j)&0xff))<<8*(3-j))
-            print(hex(((a_sr[j,0]^(wk0r>>8*(3-j)&0xff))<<8*(3-j))))
-        print(hex(textout0),hex(textout1),hex(textout2),hex(textout3))
-        textout=hex(textout0)+hex(textout1)[2:]+hex(textout2)[2:]+hex(textout3)[2:]
+        textout=hex(textout0)[2:].zfill(8)+hex(textout1)[2:].zfill(8)+hex(textout2)[2:].zfill(8)+hex(textout3)[2:].zfill(8)
         print(textout)
     return textout
 key = 0x2b7e151628aed2a6abf7158809cf4f3c
