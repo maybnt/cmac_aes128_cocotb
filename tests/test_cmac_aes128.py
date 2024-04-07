@@ -9,7 +9,7 @@ from cocotb_bus.monitors import BusMonitor
 from cocotb_bus.scoreboard import Scoreboard
 import warnings
 # from cocotb.regression import TestFactory 
-from cmac_aes128 import cmac_aes128
+from cmac_aes128 import cmac_aes
 
 class PulseDriver(BusDriver):
     _signals = [
