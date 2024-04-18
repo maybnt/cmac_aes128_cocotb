@@ -645,10 +645,12 @@ def aes_cipher(textin,key):
         textout=hex(textout0)[2:].zfill(8)+hex(textout1)[2:].zfill(8)+hex(textout2)[2:].zfill(8)+hex(textout3)[2:].zfill(8)
     return textout
 def cmac_aes(textin,key,last_block_len):
+    text_out_list=[]
     mask_128bit=0xffffffffffffffffffffffffffffffff
     text_len = textin.bit_length()
     cal_round = math.ceil(text_len/128)
     k1_k2_reg=int(aes_cipher(0,key),16)
+    text_out_list.append(hex(k1_k2_reg))
     k1_k2_reg_shift1=k1_k2_reg<<1&mask_128bit
     if k1_k2_reg>>127&0b1:
         k1_temp=k1_k2_reg_shift1^0x87
@@ -665,10 +667,13 @@ def cmac_aes(textin,key,last_block_len):
     for i in range(cal_round):
         text_cal=textin>>i*128&mask_128bit
         textin_cbc=iv_reg^text_cal
-        if (i!=cal_round-1 & math.ceil(text_cal.bit_length()/4)*4==128) | (i==cal_round-1 & last_block_len==128):
-            k1_k2_select = k2_temp
+        print(i,cal_round-1)
+        if (i!=cal_round-1 and math.ceil(text_cal.bit_length()/4)*4==128) | (i==cal_round-1 and last_block_len==128):
+            k1_k2_select = k1_temp
+            print('k1_temp')
         else:
             k1_k2_select = k2_temp
+            print('k2_temp')
         if i != cal_round-1:
             clear_0_num=0x0
             set_1_num=0x0
@@ -681,19 +686,22 @@ def cmac_aes(textin,key,last_block_len):
             textin_temp=textin_last
         else:
             textin_temp=textin_cbc
-        # print(text_len,last_block_len)
-        # print(i,cal_round)
+        print(text_len,last_block_len)
         # print(hex(clear_0_num),hex(set_1_num))
-        print('\n',hex(text_cal),'\n',hex(textin_cbc),'\n',hex(textin_filled),'\n',hex(textin_last),'\n',hex(textin_temp),hex(key))
+        print('\n',hex(iv_reg),'\n',hex(k1_k2_select),'\n',hex(k1_temp),'\n',hex(k2_temp),'\n',hex(textin_temp),hex(key))
         text_out=int(aes_cipher(textin_temp,key),16)
+        # print(hex(text_out))
         # print(i,text_out)
         iv_reg=text_out
-    return hex(text_out)
-
-key=0x2b7e151628aed2a6abf7158809cf4f3c
-textin=0x6bc1bee22e409f96e93d7e117393172a
-last_block_len=128
-print(cmac_aes(textin,key,last_block_len))
+        text_out_list.append(hex(text_out))
+    return text_out_list
+# textin=0x6bc1bee22e409f96e93d7e117393172a
+# textin=0xae2d8a571e03ac9c9eb76fac45af8e51
+# textin=0x30c81c46a35ce411e5fbc1191a0a52ef
+# textin=0x30c81c46a35ce411e5fbc1191a0a52efae2d8a571e03ac9c9eb76fac45af8e516bc1bee22e409f96e93d7e117393172a
+# key=0x2b7e151628aed2a6abf7158809cf4f3c
+# last_block_len=128
+# print(cmac_aes(textin,key,last_block_len))
 # print(aes_cipher(textin,key))
 # for a in aes_key_expand(key):
     # print(a)

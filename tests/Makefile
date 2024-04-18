@@ -15,7 +15,7 @@ DIRS := $(filter-out $(DIRS_EXC_DIRS), $(DIRS))
 VERILOG_SOURCES += $(foreach dir, $(DIRS), $(wildcard $(dir)/*.v))
 VERILOG_SOURCES += $(foreach dir, $(DIRS), $(wildcard $(dir)/*.sv))
 
-TOPLEVEL := CMAC_Top_v2
+TOPLEVEL := CMAC_Top
 
 TOPLEVEL_LANG ?= verilog
 
