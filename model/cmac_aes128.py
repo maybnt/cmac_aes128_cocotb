@@ -667,13 +667,13 @@ def cmac_aes(textin,key,last_block_len):
     for i in range(cal_round):
         text_cal=textin>>i*128&mask_128bit
         textin_cbc=iv_reg^text_cal
-        print(i,cal_round-1)
+        # print(i,cal_round-1)
         if (i!=cal_round-1 and math.ceil(text_cal.bit_length()/4)*4==128) | (i==cal_round-1 and last_block_len==128):
             k1_k2_select = k1_temp
-            print('k1_temp')
+            # print('k1_temp')
         else:
             k1_k2_select = k2_temp
-            print('k2_temp')
+            # print('k2_temp')
         if i != cal_round-1:
             clear_0_num=0x0
             set_1_num=0x0
@@ -686,9 +686,9 @@ def cmac_aes(textin,key,last_block_len):
             textin_temp=textin_last
         else:
             textin_temp=textin_cbc
-        print(text_len,last_block_len)
+        # print(text_len,last_block_len)
         # print(hex(clear_0_num),hex(set_1_num))
-        print('\n',hex(iv_reg),'\n',hex(k1_k2_select),'\n',hex(k1_temp),'\n',hex(k2_temp),'\n',hex(textin_temp),hex(key))
+        # print('\n',hex(iv_reg),'\n',hex(k1_k2_select),'\n',hex(k1_temp),'\n',hex(k2_temp),'\n',hex(textin_temp),hex(key))
         text_out=int(aes_cipher(textin_temp,key),16)
         # print(hex(text_out))
         # print(i,text_out)

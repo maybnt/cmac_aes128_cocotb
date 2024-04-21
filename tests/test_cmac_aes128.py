@@ -7,7 +7,9 @@ from cocotb_bus.bus import Bus
 from cocotb_bus.drivers import BusDriver
 from cocotb_bus.monitors import BusMonitor
 from cocotb_bus.scoreboard import Scoreboard
+from cocotb.regression import TestFactory
 import warnings
+import math
 # from cocotb.log import SimLog
 # from cocotb.regression import TestFactory 
 from cmac_aes128 import cmac_aes
@@ -43,131 +45,81 @@ class OutputMonitor(BusMonitor):
                 cal_data = self.bus.TextOut.value
                 self._recv(hex(cal_data)) 
 
-@cocotb.test()
-async def test_cmac_aes128(dut):
+class test_cmac_aes128:
+
+    def __init__(self,dut,) -> None:
+        self.dut=dut
+        self.simulate_output=[]
+        self.except_output=[]
+        self.output_monitor = OutputMonitor(dut=dut,callback=self.simulate_output.append)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+        self.scoreboard = Scoreboard(dut,fail_immediately=False)
+        # self.scoreboard.add_interface(self.output_monitor,self.except_output,strict_type=False)        
+
+    async def wait_clk_edge(self,edge='raise',cycle_num=0):
+        if edge == 'raise':
+            for _ in range(cycle_num):
+                await RisingEdge(self.dut.CLK)
+        elif edge == 'fall':
+            for _ in range(cycle_num):
+                await FallingEdge(self.dut.CLK)
+
+    async def reset_module(self) -> None:
+        self.dut.Rst_n.value = 0
+        self.dut.ld_Block.value = 0
+        self.dut.ld_Key.value = 0
+        self.dut.Last_Block.value = 0
+        self.dut.Last_Block_Len.value = 0    
+        self.dut.KEY.value = 0
+        self.dut.TextIn.value = 0
+        await self.wait_clk_edge('raise',4)
+        self.dut.Rst_n.value = 1
+        
+    async def assign_key(self,key=0) -> None:
+        await self.wait_clk_edge('raise',2)
+        self.dut.ld_Key.value = 1
+        self.dut.KEY.value = key
+        await RisingEdge(self.dut.CLK)
+        self.dut.ld_Key.value = 0
+
+    async def assign_text(self,text_in=0,last_block_len=0,last_block=0) -> None:
+        await FallingEdge(self.dut.Done)
+        await Timer(500,units='ns')
+        self.dut.ld_Block=1
+        self.dut.Last_Block=last_block
+        self.dut.TextIn=text_in
+        self.dut.Last_Block_Len=last_block_len
+        await RisingEdge(self.dut.CLK)
+        await Timer(1,units='ns')    
+        self.dut.ld_Block=0
+        self.dut.Last_Block=0
+        self.dut.TextIn=0
+        self.dut.Last_Block_Len=0
+
+async def run_test(dut,cfg) -> None:
+    # print(hex(cfg[0]),hex(cfg[1]),hex(cfg[2]))
     clock = Clock(dut.CLK,10,units='ns')
     cocotb.start_soon(clock.start(start_high=False))
-    pulse_driver = PulseDriver(dut)
-    dut.Rst_n.value = 0
-    simulate_output = []
-    except_output=[]
-    textin=0x30c81c46a35ce411e5fbc1191a0a52efae2d8a571e03ac9c9eb76fac45af8e516bc1bee22e409f96e93d7e117393172a
-    key=0x2b7e151628aed2a6abf7158809cf4f3c
-    last_block_len=128
-    except_output=cmac_aes(textin,key,last_block_len)
-    print('++++++++++++++++++++++++expect output0++++++++++++++++++++++++')
-    print(except_output)
-    key=0x2b7e151628aed2a6abf7158809cf4f3c
-    textin=0
-    last_block_len=0
-    dut.ld_Block.value = 0
-    dut.ld_Key.value = 0
-    dut.Last_Block.value = 0
-    dut.Last_Block_Len.value = 0    
-    dut.KEY.value = 0x2b7e151628aed2a6abf7158809cf4f3c
-    dut.TextIn.value = 0
-    for _ in range(4):
-        await RisingEdge(dut.CLK)
-    dut.Rst_n.value = 1
-    for _ in range(2):
-        await RisingEdge(dut.CLK)
-    dut.ld_Key.value = 1
-    await RisingEdge(dut.CLK)
-    dut.ld_Key.value = 0
-    output_monitor_inst = OutputMonitor(dut=dut,callback=simulate_output.append)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-    scoreboard = Scoreboard(dut,fail_immediately=False)
-    scoreboard.add_interface(output_monitor_inst,except_output,reorder_depth=1,strict_type=False)
-    print('++++++++++++++++++++++++expect output1++++++++++++++++++++++++')
-    print(except_output)
+    dut=test_cmac_aes128(dut)
+    dut.except_output=cmac_aes(cfg[0],cfg[1],cfg[2])
+    dut.scoreboard.add_interface(dut.output_monitor,dut.except_output,strict_type=False)        
+    await dut.reset_module()
+    await dut.assign_key(cfg[1])
+    for i in range(math.ceil(cfg[0].bit_length()/128)):
+        if i==math.ceil(cfg[0].bit_length()/128)-1:
+            await dut.assign_text(cfg[0]>>128*i&0xffffffffffffffffffffffffffffffff,cfg[2],1)
+        else:
+            await dut.assign_text(cfg[0]>>128*i&0xffffffffffffffffffffffffffffffff,cfg[2],0)
+    await dut.wait_clk_edge('raise',20)
+    raise dut.scoreboard.result
 
-    textin=0x6bc1bee22e409f96e93d7e117393172a
-    last_block_len=128
-    await FallingEdge(dut.Done)
-    await Timer(500,units='ns')
-    dut.ld_Block=1
-    dut.Last_Block=0
-    dut.TextIn=textin
-    dut.Last_Block_Len=last_block_len
-    await RisingEdge(dut.CLK)
-    await Timer(1,units='ns')    
-    dut.ld_Block=0
-    dut.Last_Block=0
-    dut.TextIn=0
-    dut.Last_Block_Len=0
-    # scoreboard.add_interface(output_monitor_inst,except_output,reorder_depth=1,strict_type=False)
-    print('++++++++++++++++++++++++expect output2++++++++++++++++++++++++')
-    print(except_output)
+cfg0=[
+0x30c81c46a35ce411e5fbc1191a0a52efae2d8a571e03ac9c9eb76fac45af8e516bc1bee22e409f96e93d7e117393172a,
+0x2b7e151628aed2a6abf7158809cf4f3c,
+0,
+]
 
-    textin=0xae2d8a571e03ac9c9eb76fac45af8e51
-    last_block_len=128
-    await FallingEdge(dut.Done)
-    await Timer(500,units='ns')
-    dut.ld_Block=1
-    dut.Last_Block=0
-    dut.TextIn=textin
-    dut.Last_Block_Len=last_block_len
-    await RisingEdge(dut.CLK)
-    await Timer(1,units='ns')    
-    dut.ld_Block=0
-    dut.Last_Block=0
-    dut.TextIn=0
-    dut.Last_Block_Len=0
-    # scoreboard.add_interface(output_monitor_inst,except_output,reorder_depth=1,strict_type=False)
-    print('++++++++++++++++++++++++expect output3++++++++++++++++++++++++')
-    print(except_output)
-
-    textin=0x30c81c46a35ce411e5fbc1191a0a52ef
-    last_block_len=128
-    await FallingEdge(dut.Done)
-    await Timer(500,units='ns')
-    dut.ld_Block=1
-    dut.Last_Block=1
-    dut.TextIn=textin
-    dut.Last_Block_Len=last_block_len
-    await RisingEdge(dut.CLK)
-    await Timer(1,units='ns')    
-    dut.ld_Block=0
-    dut.Last_Block=0
-    dut.TextIn=0
-    dut.Last_Block_Len=0
-    for _ in range(20):
-        await RisingEdge(dut.CLK)
-    # scoreboard.add_interface(output_monitor_inst,except_output,reorder_depth=1,strict_type=False)
-    print('++++++++++++++++++++++++expect output4++++++++++++++++++++++++')
-    print(except_output)
-
-    # except_output = ['0','0','0','0','0','0','0','0','0','0']
-    # for i in range(100):
-        # input_bus.ld_Key.value = 1
-        # input_bus.ld_Block.value = 1
-        # input_bus.Last_Block.value = 0
-        # input_bus.KEY.value = random.randint(0,65535)
-        # input_bus.TextIn.value = random.randint(0,65535)
-        # input_bus.Last_Block_Len.value = 0
-        # transaction = [
-                    #    input_bus.ld_Key,
-                    #    input_bus.ld_Block,
-                    #    input_bus.Last_Block,
-                    #    input_bus.KEY,
-                    #    input_bus.TextIn,
-                    #    input_bus.Last_Block_Len,
-                    # ]
-        # await pulse_driver.send(transaction)
-        # output_monitor_inst = OutputMonitor(dut=dut,callback=simulate_output.append)
-        # with warnings.catch_warnings():
-            # warnings.simplefilter("ignore")
-        # scoreboard = Scoreboard(dut,fail_immediately=True)
-        # scoreboard.add_interface(output_monitor_inst,except_output,reorder_depth=10,strict_type=False)
-    
-    # for a in simulate_output:
-        # print(a)
-
-    # with warnings.catch_warnings():
-        # warnings.simplefilter("ignore")
-        # scoreboard = Scoreboard(dut,fail_immediately=True)
-    # scoreboard.add_interface(output_monitor_inst,except_output,reorder_depth=10,strict_type=False)
-    # print('**************test result**************')
-    # assert scoreboard.result 
-    # print(dut.TextOut.value)
+factory=TestFactory(run_test)
+factory.add_option('cfg',[cfg0])
+factory.generate_tests()
